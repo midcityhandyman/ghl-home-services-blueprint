@@ -238,12 +238,71 @@ def test_estimate_follow_up_runs_full_sequence(bp):
 
 
 def test_unhappy_customer_never_gets_review_ask(bp):
-    changes = {"wait_1d": {"set_fields": {"job_satisfaction": "unhappy"}}}
+    changes = {"wait_2d": {"set_fields": {"job_satisfaction": "unhappy"}}}
     _, contact = simulate.run(bp.workflow("job_complete"), None, changes)
     assert "unhappy-customer" in contact["tags"]
     assert "review-eligible" not in contact["tags"]
     log, _ = simulate.run(bp.workflow("review_ask"), {"tags": ["unhappy-customer"]})
     assert not any("SMS" in line or "EMAIL" in line for line in log)
+
+
+def test_neutral_customer_is_not_sent_to_the_review_ask(bp):
+    changes = {"wait_2d": {"set_fields": {"job_satisfaction": "neutral"}}}
+    log, contact = simulate.run(bp.workflow("job_complete"), None, changes)
+    assert "review-eligible" not in contact["tags"]
+    assert "unhappy-customer" not in contact["tags"]
+    assert sum("TASK" in line for line in log) == 2  # invoice and check in, no overdue task
+
+
+def test_happy_customer_is_handed_to_the_review_ask(bp):
+    changes = {"wait_2d": {"set_fields": {"job_satisfaction": "happy"}}}
+    _, contact = simulate.run(bp.workflow("job_complete"), None, changes)
+    assert "review-eligible" in contact["tags"]
+
+
+def test_promised_check_in_has_a_task_before_the_wait(bp):
+    ids = [s["id"] for s in bp.workflow("job_complete")["steps"]]
+    assert ids.index("thank_you") < ids.index("checkin_task") < ids.index("wait_2d")
+    log, contact = simulate.run(bp.workflow("job_complete"))
+    assert any("Check in is overdue" in line for line in log)  # nobody recorded feedback
+    assert "review-eligible" not in contact["tags"]
+
+
+def test_set_field_keeps_a_number_a_number(bp):
+    wf = {
+        "id": "t",
+        "trigger": {"type": "missed_call"},
+        "steps": [
+            {"id": "set_amount", "type": "set_field", "field": "estimate_amount", "value": 4200},
+            {"id": "big", "type": "condition", "if": {"field": "estimate_amount", "equals": 4200},
+             "then": "yes", "else": "done"},
+            {"id": "yes", "type": "add_tag", "tag": "customer"},
+            {"id": "done", "type": "end"},
+        ],
+    }
+    _, contact = simulate.run(wf)
+    assert contact["fields"]["estimate_amount"] == 4200
+    assert "customer" in contact["tags"]
+
+
+def test_scenario_change_on_unknown_wait_step_is_rejected(bp):
+    with pytest.raises(ValueError, match="wait_1h"):
+        simulate.run(bp.workflow("new_lead"), None, {"wait_1h": {"replied": True}})
+
+
+def test_cli_simulate_reports_scenario_errors(tmp_path, capsys):
+    path = tmp_path / "s.yaml"
+    path.write_text("workflow: new_lead\nduring_wait:\n  wait_1h: {replied: true}\n", encoding="utf-8")
+    assert main(["simulate", str(path)]) == 1
+    assert "Scenario error" in capsys.readouterr().out
+    path.write_text("workflow: no_such_workflow\n", encoding="utf-8")
+    assert main(["simulate", str(path)]) == 1
+    assert "no workflow with id" in capsys.readouterr().out
+
+
+def test_cli_missing_blueprint_folder_is_a_clean_error(tmp_path, capsys):
+    assert main(["--blueprint", str(tmp_path / "nope"), "validate"]) == 2
+    assert "File not found" in capsys.readouterr().out
 
 
 def test_review_thanks_when_review_arrives(bp):
@@ -260,6 +319,26 @@ def test_demo_scenarios_run_and_reference_real_workflows(bp, capsys):
     assert "Final contact:" in capsys.readouterr().out
 
 
+def test_committed_demo_output_is_current(capsys):
+    import runpy
+
+    demo = runpy.run_path(str(ROOT / "demo" / "run_demo.py"))
+    capsys.readouterr()
+    demo["run"]()
+    committed = (ROOT / "demo" / "output.txt").read_text(encoding="utf-8").replace("\r\n", "\n")
+    assert capsys.readouterr().out == committed
+
+
+def test_readme_sample_output_is_real():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8").replace("\r\n", "\n")
+    output = (ROOT / "demo" / "output.txt").read_text(encoding="utf-8").replace("\r\n", "\n")
+    block = readme.split("## What you will see", 1)[1].split("```", 2)[1].strip("\n")
+    lines = [line for line in block.splitlines() if line.strip() and line.strip() != "..."]
+    assert len(lines) >= 8
+    for line in lines:
+        assert line in output.splitlines(), f"README shows a line the demo does not print: {line}"
+
+
 # repo hygiene ---------------------------------------------------------------
 
 
@@ -273,4 +352,4 @@ def test_only_synthetic_contact_data_and_no_em_dashes():
         for phone in re.findall(r"\b\d{3}-\d{4}\b", text):
             assert phone.startswith("555-01"), f"non synthetic phone in {path.name}"
         for domain in re.findall(r"[\w.]+@([\w.]+\w)", text):
-            assert domain in {"example.com", "v4", "v5"}, f"non example email in {path.name}"
+            assert domain in {"example.com", "v7"}, f"non example email in {path.name}"

@@ -38,18 +38,19 @@ Final contact:
   stages: sales.won
   fields: estimate_amount=4200, estimate_sent_date=2026-01-15, service_type=remodel
 
-Scenario: Finished job with happy feedback recorded the next day
+Scenario: Finished job with happy feedback recorded at the check in
 Workflow: Job Complete Closeout (job_complete)
   [day 0 00:00] tag_customer         add tag customer
   [day 0 00:00] clear_new_lead       remove tag new-lead
   [day 0 00:00] invoice_task         TASK: Send final invoice (due in 1d)
   [day 0 00:00] thank_you            SMS to 555-0104: Thanks Riley, your hvac job is wrapped up. Tech One will check in tomorrow to make sure everything is right.
-  [day 0 00:00] wait_1d              wait 1d
-  [day 1 00:00] (meanwhile)          job_satisfaction set to happy
-  [day 1 00:00] was_unhappy          Feedback unhappy? no
-  [day 1 00:00] has_feedback         Feedback recorded? yes
-  [day 1 00:00] tag_review_eligible  add tag review-eligible
-  [day 1 00:00] done                 end
+  [day 0 00:00] checkin_task         TASK: Check in with customer and record job satisfaction (due in 1d)
+  [day 0 00:00] wait_2d              wait 2d
+  [day 2 00:00] (meanwhile)          job_satisfaction set to happy
+  [day 2 00:00] was_unhappy          Feedback unhappy? no
+  [day 2 00:00] was_happy            Feedback happy? yes
+  [day 2 00:00] tag_review_eligible  add tag review-eligible
+  [day 2 00:00] done                 end
 Final contact:
   tags:   customer, review-eligible
   stages: jobs.complete

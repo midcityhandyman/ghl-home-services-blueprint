@@ -97,6 +97,10 @@ def run(wf, contact=None, during_wait=None):
     during_wait = during_wait or {}
     steps = wf["steps"]
     index_of = {s["id"]: i for i, s in enumerate(steps)}
+    wait_ids = {s["id"] for s in steps if s["type"] == "wait"}
+    unknown = sorted(set(during_wait) - wait_ids)
+    if unknown:
+        raise ValueError(f"during_wait names {unknown}, which are not wait steps in {wf['id']}")
     trigger = wf["trigger"]
     if trigger["type"] == "stage_entered":
         contact["stages"][trigger["pipeline"]] = trigger["stage"]
@@ -120,7 +124,8 @@ def run(wf, contact=None, during_wait=None):
             contact["tags"].discard(step["tag"])
             say(current, f"remove tag {step['tag']}")
         elif kind == "set_field":
-            contact["fields"][step["field"]] = render(step["value"], contact)
+            value = step["value"]  # only text is rendered, so a number stays a number
+            contact["fields"][step["field"]] = render(value, contact) if isinstance(value, str) else value
             say(current, f"set {step['field']} = {contact['fields'][step['field']]}")
         elif kind == "move_stage":
             contact["stages"][step["pipeline"]] = step["stage"]

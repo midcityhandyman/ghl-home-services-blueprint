@@ -110,7 +110,7 @@ flowchart TD
 
 ### Job Complete Closeout (`job_complete`)
 
-Goal: Close out a finished job, catch unhappy customers early, and hand happy ones to the review ask.
+Goal: Close out a finished job, catch unhappy customers early, and hand only happy ones to the review ask.
 
 Source: `blueprint/workflows/job_complete.yaml`
 
@@ -121,25 +121,30 @@ flowchart TD
     s_clear_new_lead["Remove tag: new-lead"]
     s_invoice_task["Task: Send final invoice"]
     s_thank_you["SMS: thank_you"]
-    s_wait_1d[/"Wait 1d"/]
+    s_checkin_task["Task: Check in with customer and record job satisfaction"]
+    s_wait_2d[/"Wait 2d"/]
     s_was_unhappy{"Feedback unhappy?"}
     s_tag_unhappy["Add tag: unhappy-customer"]
     s_escalate["Notify team: escalate"]
+    s_was_happy{"Feedback happy?"}
     s_has_feedback{"Feedback recorded?"}
-    s_feedback_task["Task: Call customer and record job satisfaction"]
+    s_feedback_task["Task: Check in is overdue, call customer and record job satisfaction"]
     s_tag_review_eligible["Add tag: review-eligible"]
     s_done(["End"])
     trigger --> s_tag_customer
     s_tag_customer --> s_clear_new_lead
     s_clear_new_lead --> s_invoice_task
     s_invoice_task --> s_thank_you
-    s_thank_you --> s_wait_1d
-    s_wait_1d --> s_was_unhappy
+    s_thank_you --> s_checkin_task
+    s_checkin_task --> s_wait_2d
+    s_wait_2d --> s_was_unhappy
     s_was_unhappy -->|yes| s_tag_unhappy
-    s_was_unhappy -->|no| s_has_feedback
+    s_was_unhappy -->|no| s_was_happy
     s_tag_unhappy --> s_escalate
     s_escalate --> s_done
-    s_has_feedback -->|yes| s_tag_review_eligible
+    s_was_happy -->|yes| s_tag_review_eligible
+    s_was_happy -->|no| s_has_feedback
+    s_has_feedback -->|yes| s_done
     s_has_feedback -->|no| s_feedback_task
     s_feedback_task --> s_done
     s_tag_review_eligible --> s_done
@@ -187,7 +192,7 @@ flowchart TD
 
 ### New Lead Intake (`new_lead`)
 
-Goal: Reply to a web lead inside one minute and make sure a person follows up.
+Goal: Text a web lead back as the first step and make sure a person follows up.
 
 Source: `blueprint/workflows/new_lead.yaml`
 

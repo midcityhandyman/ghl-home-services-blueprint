@@ -1,4 +1,4 @@
-name: Finished job with happy feedback recorded the next day
+name: Finished job with happy feedback recorded at the check in
 workflow: job_complete
 contact:
   first_name: Riley
@@ -10,6 +10,6 @@ contact:
     service_type: hvac
     assigned_tech: Tech One
 during_wait:
-  wait_1d:
+  wait_2d:
     set_fields:
       job_satisfaction: happy

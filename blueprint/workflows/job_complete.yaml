@@ -1,6 +1,6 @@
 id: job_complete
 name: Job Complete Closeout
-goal: Close out a finished job, catch unhappy customers early, and hand happy ones to the review ask.
+goal: Close out a finished job, catch unhappy customers early, and hand only happy ones to the review ask.
 trigger:
   type: stage_entered
   pipeline: jobs
@@ -22,15 +22,19 @@ steps:
       Thanks {{contact.first_name}}, your {{custom.service_type}} job is
       wrapped up. {{custom.assigned_tech}} will check in tomorrow to make sure
       everything is right.
-  - id: wait_1d
+  - id: checkin_task
+    type: create_task
+    title: Check in with customer and record job satisfaction
+    due_in: 1d
+  - id: wait_2d
     type: wait
-    duration: 1d
+    duration: 2d
   - id: was_unhappy
     type: condition
     name: Feedback unhappy?
     if: {field: job_satisfaction, equals: unhappy}
     then: tag_unhappy
-    else: has_feedback
+    else: was_happy
   - id: tag_unhappy
     type: add_tag
     tag: unhappy-customer
@@ -38,15 +42,21 @@ steps:
     type: notify_team
     message: "Unhappy customer: {{contact.first_name}} {{contact.last_name}}. Owner call today."
     next: done
+  - id: was_happy
+    type: condition
+    name: Feedback happy?
+    if: {field: job_satisfaction, equals: happy}
+    then: tag_review_eligible
+    else: has_feedback
   - id: has_feedback
     type: condition
     name: Feedback recorded?
     if: {field: job_satisfaction, is_set: true}
-    then: tag_review_eligible
+    then: done
     else: feedback_task
   - id: feedback_task
     type: create_task
-    title: Call customer and record job satisfaction
+    title: Check in is overdue, call customer and record job satisfaction
     due_in: 1d
     next: done
   - id: tag_review_eligible

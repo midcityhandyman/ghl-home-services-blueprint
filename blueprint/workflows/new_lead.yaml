@@ -1,6 +1,6 @@
 id: new_lead
 name: New Lead Intake
-goal: Reply to a web lead inside one minute and make sure a person follows up.
+goal: Text a web lead back as the first step and make sure a person follows up.
 trigger:
   type: form_submitted
   form: request-a-quote

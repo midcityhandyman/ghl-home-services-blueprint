@@ -55,10 +55,17 @@ def cmd_docs(args):
 
 def cmd_simulate(args):
     bp = load_blueprint(args.blueprint)
+    if has_errors(validate(bp)):
+        print("Blueprint has errors. Run validate first.")
+        return 1
     with open(args.scenario, "r", encoding="utf-8") as handle:
         scenario = yaml.safe_load(handle)
-    wf = bp.workflow(scenario["workflow"])
-    log, contact = simulate.run(wf, scenario.get("contact"), scenario.get("during_wait"))
+    try:
+        wf = bp.workflow(scenario["workflow"])
+        log, contact = simulate.run(wf, scenario.get("contact"), scenario.get("during_wait"))
+    except (KeyError, ValueError) as exc:
+        print(f"Scenario error: {exc.args[0]}")
+        return 1
     print(f"Scenario: {scenario.get('name', args.scenario)}")
     print(f"Workflow: {wf['name']} ({wf['id']})")
     for line in log:
@@ -84,7 +91,11 @@ def main(argv=None):
     p.add_argument("scenario")
     p.set_defaults(func=cmd_simulate)
     args = parser.parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except FileNotFoundError as exc:
+        print(f"File not found: {exc.filename}")
+        return 2
 
 
 if __name__ == "__main__":
