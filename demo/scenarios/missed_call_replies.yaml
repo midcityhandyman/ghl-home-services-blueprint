@@ -1,0 +1,10 @@
+name: Missed call from a new caller who texts back
+workflow: missed_call
+contact:
+  first_name: Jordan
+  last_name: Example
+  phone: 555-0102
+  email: jordan.example@example.com
+during_wait:
+  wait_for_reply:
+    replied: true

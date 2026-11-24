@@ -1,0 +1,21 @@
+# Pipelines and stages. Documented design, not an official export format.
+pipelines:
+  - id: sales
+    name: Sales
+    description: From first contact to a signed or declined estimate.
+    stages:
+      - {id: new_lead, name: New Lead}
+      - {id: contacted, name: Contacted}
+      - {id: estimate_scheduled, name: Estimate Scheduled}
+      - {id: estimate_sent, name: Estimate Sent}
+      - {id: won, name: Won}
+      - {id: lost, name: Lost}
+  - id: jobs
+    name: Jobs
+    description: Production pipeline for accepted work.
+    stages:
+      - {id: scheduled, name: Scheduled}
+      - {id: in_progress, name: In Progress}
+      - {id: complete, name: Complete}
+      - {id: invoiced, name: Invoiced}
+      - {id: paid, name: Paid}

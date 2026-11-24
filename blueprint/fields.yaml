@@ -1,0 +1,30 @@
+# Custom contact fields. Types: text, number, date, dropdown.
+fields:
+  - key: service_type
+    name: Service Type
+    type: dropdown
+    options: [plumbing, electrical, hvac, handyman, remodel]
+  - key: lead_source
+    name: Lead Source
+    type: dropdown
+    options: [web_form, phone, referral, ad]
+  - key: estimate_amount
+    name: Estimate Amount
+    type: number
+  - key: estimate_sent_date
+    name: Estimate Sent Date
+    type: date
+  - key: preferred_contact_window
+    name: Preferred Contact Window
+    type: dropdown
+    options: [morning, afternoon, evening]
+  - key: job_satisfaction
+    name: Job Satisfaction
+    type: dropdown
+    options: [happy, neutral, unhappy]
+  - key: review_requested_date
+    name: Review Requested Date
+    type: date
+  - key: assigned_tech
+    name: Assigned Tech
+    type: text

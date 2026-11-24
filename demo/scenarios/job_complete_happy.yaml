@@ -1,0 +1,15 @@
+name: Finished job with happy feedback recorded the next day
+workflow: job_complete
+contact:
+  first_name: Riley
+  last_name: Demo
+  phone: 555-0104
+  email: riley.demo@example.com
+  tags: [new-lead]
+  fields:
+    service_type: hvac
+    assigned_tech: Tech One
+during_wait:
+  wait_1d:
+    set_fields:
+      job_satisfaction: happy

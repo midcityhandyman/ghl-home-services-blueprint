@@ -1,0 +1,55 @@
+id: new_lead
+name: New Lead Intake
+goal: Reply to a web lead inside one minute and make sure a person follows up.
+trigger:
+  type: form_submitted
+  form: request-a-quote
+steps:
+  - id: tag_new
+    type: add_tag
+    tag: new-lead
+  - id: set_source
+    type: set_field
+    field: lead_source
+    value: web_form
+  - id: open_opportunity
+    type: move_stage
+    pipeline: sales
+    stage: new_lead
+  - id: instant_reply
+    type: send_sms
+    message: >-
+      Hi {{contact.first_name}}, thanks for reaching out to {{business.name}}
+      about {{custom.service_type}}. A real person will call you shortly.
+      Is {{custom.preferred_contact_window}} still a good time?
+  - id: alert_office
+    type: notify_team
+    message: "New web lead: {{contact.first_name}} {{contact.last_name}}, {{custom.service_type}}."
+  - id: call_task
+    type: create_task
+    title: Call new lead within 15 minutes
+    due_in: 15m
+  - id: wait_for_reply
+    type: wait
+    duration: 1h
+  - id: did_reply
+    type: condition
+    name: Replied?
+    if: {replied: true}
+    then: mark_contacted
+    else: nudge
+  - id: mark_contacted
+    type: move_stage
+    pipeline: sales
+    stage: contacted
+    next: done
+  - id: nudge
+    type: send_sms
+    message: >-
+      Hi {{contact.first_name}}, just checking in. Reply here or call
+      {{business.phone}} and we will get your estimate scheduled.
+  - id: flag_callback
+    type: add_tag
+    tag: needs-callback
+  - id: done
+    type: end

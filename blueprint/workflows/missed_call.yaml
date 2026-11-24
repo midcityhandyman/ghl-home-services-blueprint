@@ -1,0 +1,60 @@
+id: missed_call
+name: Missed Call Text Back
+goal: Turn a missed call into a text conversation before the caller dials a competitor.
+trigger:
+  type: missed_call
+steps:
+  - id: opted_out
+    type: condition
+    name: Opted out?
+    if: {has_tag: do-not-contact}
+    then: done
+    else: tag_missed
+  - id: tag_missed
+    type: add_tag
+    tag: missed-call
+  - id: text_back
+    type: send_sms
+    message: >-
+      Sorry we missed your call. This is {{business.name}}. What can we help
+      with? Reply here and we will get right back to you.
+  - id: existing_customer
+    type: condition
+    name: Existing customer?
+    if: {has_tag: customer}
+    then: alert_office
+    else: set_source
+  - id: alert_office
+    type: notify_team
+    message: "Missed call from existing customer {{contact.first_name}} {{contact.last_name}}."
+    next: wait_for_reply
+  - id: set_source
+    type: set_field
+    field: lead_source
+    value: phone
+  - id: open_opportunity
+    type: move_stage
+    pipeline: sales
+    stage: new_lead
+  - id: wait_for_reply
+    type: wait
+    duration: 30m
+  - id: did_reply
+    type: condition
+    name: Replied?
+    if: {replied: true}
+    then: clear_missed
+    else: flag_callback
+  - id: clear_missed
+    type: remove_tag
+    tag: missed-call
+    next: done
+  - id: flag_callback
+    type: add_tag
+    tag: needs-callback
+  - id: callback_task
+    type: create_task
+    title: Return missed call
+    due_in: 2h
+  - id: done
+    type: end

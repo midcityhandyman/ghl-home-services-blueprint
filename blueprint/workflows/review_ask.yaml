@@ -1,0 +1,59 @@
+id: review_ask
+name: Review Ask
+goal: Ask happy customers for a review once, remind once, and never ask an unhappy one.
+trigger:
+  type: tag_added
+  tag: review-eligible
+steps:
+  - id: opted_out
+    type: condition
+    name: Opted out?
+    if: {has_tag: do-not-contact}
+    then: done
+    else: is_unhappy
+  - id: is_unhappy
+    type: condition
+    name: Flagged unhappy?
+    if: {has_tag: unhappy-customer}
+    then: done
+    else: already_reviewed
+  - id: already_reviewed
+    type: condition
+    name: Already left a review?
+    if: {has_tag: review-left}
+    then: done
+    else: ask
+  - id: ask
+    type: send_sms
+    message: >-
+      Hi {{contact.first_name}}, thanks again for choosing {{business.name}}.
+      Would you leave us a quick review? {{business.review_link}}
+  - id: stamp_request
+    type: set_field
+    field: review_requested_date
+    value: "{{today}}"
+  - id: tag_requested
+    type: add_tag
+    tag: review-requested
+  - id: wait_3d
+    type: wait
+    duration: 3d
+  - id: reviewed_yet
+    type: condition
+    name: Review left?
+    if: {has_tag: review-left}
+    then: thank
+    else: remind
+  - id: thank
+    type: send_sms
+    message: Thank you for the review, {{contact.first_name}}. It means a lot to a small crew.
+    next: done
+  - id: remind
+    type: send_email
+    subject: A quick favor from {{business.name}}
+    message: >-
+      Hi {{contact.first_name}}, if you have one minute, a review helps
+      neighbors find us: {{business.review_link}}. This is the only reminder
+      we will send.
+  - id: done
+    type: end

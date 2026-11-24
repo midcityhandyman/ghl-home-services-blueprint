@@ -1,0 +1,13 @@
+# Tags. A tag is a cheap, visible flag; anything with a value belongs in a field.
+tags:
+  - {name: new-lead, purpose: Contact entered through an intake path and has not been qualified.}
+  - {name: missed-call, purpose: We missed an inbound call and the text back is in flight.}
+  - {name: needs-callback, purpose: A person must call this contact. Drives the daily callback list.}
+  - {name: estimate-pending, purpose: An estimate is out and the follow up sequence is active.}
+  - {name: estimate-follow-up-done, purpose: The follow up sequence ran to the end with no decision.}
+  - {name: customer, purpose: At least one job has been completed for this contact.}
+  - {name: unhappy-customer, purpose: Job feedback was negative. Blocks the review ask.}
+  - {name: review-eligible, purpose: Job closed out cleanly. Adding it starts the review ask.}
+  - {name: review-requested, purpose: A review request has been sent.}
+  - {name: review-left, purpose: Staff confirmed a public review was posted.}
+  - {name: do-not-contact, purpose: Contact opted out. Missed call and review ask check it before sending.}

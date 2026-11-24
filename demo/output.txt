@@ -1,0 +1,115 @@
+
+========================================================================
+1. Validate the blueprint as shipped
+========================================================================
+Checked 5 workflows against 2 pipelines (11 stages), 8 fields, 11 tags: 0 errors, 0 warnings.
+exit code: 0
+
+========================================================================
+2. Validate a deliberately broken copy (in memory, files untouched)
+========================================================================
+ERROR   estimate_follow_up:trigger: stage 'quote_sent' is not defined in pipeline 'sales'
+ERROR   estimate_follow_up:tag_pending: tag 'estimate-open' is not defined in tags.yaml
+ERROR   estimate_follow_up:wait_2d: duration '2 days' must look like 15m, 2h or 3d
+ERROR   estimate_follow_up:sms_check_in: field 'quote_total' is not defined in fields.yaml
+ERROR   estimate_follow_up:still_open_3: points to step 'clean_up', which does not exist
+ERROR   new_lead:set_source: value 'website' is not an option of dropdown field 'lead_source'
+WARNING fields.yaml:estimate_amount: field is defined but no workflow uses it
+6 errors caught.
+
+========================================================================
+3. Dry run every workflow with a synthetic contact
+========================================================================
+
+Scenario: Estimate accepted after the first follow up text
+Workflow: Estimate Follow Up (estimate_follow_up)
+  [day 0 00:00] tag_pending          add tag estimate-pending
+  [day 0 00:00] stamp_sent           set estimate_sent_date = 2026-01-15
+  [day 0 00:00] wait_2d              wait 2d
+  [day 2 00:00] still_open_1         Still in Estimate Sent? yes
+  [day 2 00:00] sms_check_in         SMS to 555-0103: Hi Casey, did you get a chance to look at the remodel estimate for $4200? Happy to answer any questions.
+  [day 2 00:00] wait_3d              wait 3d
+  [day 5 00:00] (meanwhile)          moved to sales.won
+  [day 5 00:00] still_open_2         Still in Estimate Sent? no
+  [day 5 00:00] cleanup              remove tag estimate-pending
+  [day 5 00:00] done                 end
+Final contact:
+  tags:   none
+  stages: sales.won
+  fields: estimate_amount=4200, estimate_sent_date=2026-01-15, service_type=remodel
+
+Scenario: Finished job with happy feedback recorded the next day
+Workflow: Job Complete Closeout (job_complete)
+  [day 0 00:00] tag_customer         add tag customer
+  [day 0 00:00] clear_new_lead       remove tag new-lead
+  [day 0 00:00] invoice_task         TASK: Send final invoice (due in 1d)
+  [day 0 00:00] thank_you            SMS to 555-0104: Thanks Riley, your hvac job is wrapped up. Tech One will check in tomorrow to make sure everything is right.
+  [day 0 00:00] wait_1d              wait 1d
+  [day 1 00:00] (meanwhile)          job_satisfaction set to happy
+  [day 1 00:00] was_unhappy          Feedback unhappy? no
+  [day 1 00:00] has_feedback         Feedback recorded? yes
+  [day 1 00:00] tag_review_eligible  add tag review-eligible
+  [day 1 00:00] done                 end
+Final contact:
+  tags:   customer, review-eligible
+  stages: jobs.complete
+  fields: assigned_tech=Tech One, job_satisfaction=happy, service_type=hvac
+
+Scenario: Missed call from a new caller who texts back
+Workflow: Missed Call Text Back (missed_call)
+  [day 0 00:00] opted_out            Opted out? no
+  [day 0 00:00] tag_missed           add tag missed-call
+  [day 0 00:00] text_back            SMS to 555-0102: Sorry we missed your call. This is Sample Home Services. What can we help with? Reply here and we will get right back to you.
+  [day 0 00:00] existing_customer    Existing customer? no
+  [day 0 00:00] set_source           set lead_source = phone
+  [day 0 00:00] open_opportunity     move to sales.new_lead
+  [day 0 00:00] wait_for_reply       wait 30m
+  [day 0 00:30] (meanwhile)          contact replied
+  [day 0 00:30] did_reply            Replied? yes
+  [day 0 00:30] clear_missed         remove tag missed-call
+  [day 0 00:30] done                 end
+Final contact:
+  tags:   none
+  stages: sales.new_lead
+  fields: lead_source=phone
+
+Scenario: Web lead who does not reply in the first hour
+Workflow: New Lead Intake (new_lead)
+  [day 0 00:00] tag_new              add tag new-lead
+  [day 0 00:00] set_source           set lead_source = web_form
+  [day 0 00:00] open_opportunity     move to sales.new_lead
+  [day 0 00:00] instant_reply        SMS to 555-0101: Hi Alex, thanks for reaching out to Sample Home Services about plumbing. A real person will call you shortly. Is afternoon still a good time?
+  [day 0 00:00] alert_office         NOTIFY team: New web lead: Alex Sample, plumbing.
+  [day 0 00:00] call_task            TASK: Call new lead within 15 minutes (due in 15m)
+  [day 0 00:00] wait_for_reply       wait 1h
+  [day 0 01:00] did_reply            Replied? no
+  [day 0 01:00] nudge                SMS to 555-0101: Hi Alex, just checking in. Reply here or call 555-0100 and we will get your estimate scheduled.
+  [day 0 01:00] flag_callback        add tag needs-callback
+  [day 0 01:00] done                 end
+Final contact:
+  tags:   needs-callback, new-lead
+  stages: sales.new_lead
+  fields: lead_source=web_form, preferred_contact_window=afternoon, service_type=plumbing
+
+Scenario: Review ask where the customer needs the one reminder
+Workflow: Review Ask (review_ask)
+  [day 0 00:00] opted_out            Opted out? no
+  [day 0 00:00] is_unhappy           Flagged unhappy? no
+  [day 0 00:00] already_reviewed     Already left a review? no
+  [day 0 00:00] ask                  SMS to 555-0104: Hi Riley, thanks again for choosing Sample Home Services. Would you leave us a quick review? https://example.com/review
+  [day 0 00:00] stamp_request        set review_requested_date = 2026-01-15
+  [day 0 00:00] tag_requested        add tag review-requested
+  [day 0 00:00] wait_3d              wait 3d
+  [day 3 00:00] reviewed_yet         Review left? no
+  [day 3 00:00] remind               EMAIL to riley.demo@example.com: [A quick favor from Sample Home Services] Hi Riley, if you have one minute, a review helps neighbors find us: https://example.com/review. This is the only reminder we will send.
+  [day 3 00:00] done                 end
+Final contact:
+  tags:   customer, review-eligible, review-requested
+  stages: none
+  fields: review_requested_date=2026-01-15
+
+========================================================================
+4. Check the generated docs match the definitions
+========================================================================
+BLUEPRINT.md is up to date.
+exit code: 0

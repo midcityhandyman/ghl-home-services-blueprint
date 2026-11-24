@@ -1,0 +1,66 @@
+id: estimate_follow_up
+name: Estimate Follow Up
+goal: Follow up on a sent estimate three times, and stop the moment the deal moves.
+trigger:
+  type: stage_entered
+  pipeline: sales
+  stage: estimate_sent
+steps:
+  - id: tag_pending
+    type: add_tag
+    tag: estimate-pending
+  - id: stamp_sent
+    type: set_field
+    field: estimate_sent_date
+    value: "{{today}}"
+  - id: wait_2d
+    type: wait
+    duration: 2d
+  - id: still_open_1
+    type: condition
+    name: Still in Estimate Sent?
+    if: {in_stage: {pipeline: sales, stage: estimate_sent}}
+    then: sms_check_in
+    else: cleanup
+  - id: sms_check_in
+    type: send_sms
+    message: >-
+      Hi {{contact.first_name}}, did you get a chance to look at the
+      {{custom.service_type}} estimate for ${{custom.estimate_amount}}?
+      Happy to answer any questions.
+  - id: wait_3d
+    type: wait
+    duration: 3d
+  - id: still_open_2
+    type: condition
+    name: Still in Estimate Sent?
+    if: {in_stage: {pipeline: sales, stage: estimate_sent}}
+    then: email_details
+    else: cleanup
+  - id: email_details
+    type: send_email
+    subject: Your estimate from {{business.name}}
+    message: >-
+      Hi {{contact.first_name}}, your estimate is still open. If the scope or
+      timing needs to change, reply to this email and we will revise it.
+  - id: wait_7d
+    type: wait
+    duration: 7d
+  - id: still_open_3
+    type: condition
+    name: Still in Estimate Sent?
+    if: {in_stage: {pipeline: sales, stage: estimate_sent}}
+    then: final_call_task
+    else: cleanup
+  - id: final_call_task
+    type: create_task
+    title: Final call on open estimate, then mark won or lost
+    due_in: 1d
+  - id: tag_done
+    type: add_tag
+    tag: estimate-follow-up-done
+  - id: cleanup
+    type: remove_tag
+    tag: estimate-pending
+  - id: done
+    type: end

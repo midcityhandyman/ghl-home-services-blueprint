@@ -1,0 +1,14 @@
+name: Estimate accepted after the first follow up text
+workflow: estimate_follow_up
+contact:
+  first_name: Casey
+  last_name: Placeholder
+  phone: 555-0103
+  email: casey.placeholder@example.com
+  fields:
+    service_type: remodel
+    estimate_amount: 4200
+during_wait:
+  wait_3d:
+    move_stages:
+      sales: won

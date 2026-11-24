@@ -1,0 +1,10 @@
+name: Web lead who does not reply in the first hour
+workflow: new_lead
+contact:
+  first_name: Alex
+  last_name: Sample
+  phone: 555-0101
+  email: alex.sample@example.com
+  fields:
+    service_type: plumbing
+    preferred_contact_window: afternoon

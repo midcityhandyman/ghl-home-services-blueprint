@@ -1,0 +1,8 @@
+name: Review ask where the customer needs the one reminder
+workflow: review_ask
+contact:
+  first_name: Riley
+  last_name: Demo
+  phone: 555-0104
+  email: riley.demo@example.com
+  tags: [customer]
